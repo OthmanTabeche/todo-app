@@ -6,7 +6,7 @@ import { useAutoAnimate } from '@formkit/auto-animate/react'
 interface Props {
   todos: TodoType[]
   setCompleted: (id: string, completed: boolean) => void
-  setTitle: (params: Omit<TodoType, 'completed'>) => void
+  setTitle: (params: { id: string, title: string }) => void
   removeTodo: (id: string) => void
 }
 

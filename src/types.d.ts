@@ -1,7 +1,9 @@
 import type { TODO_FILTERS } from './consts'
 
 export interface Todo {
-  id: string
+  id: string       // alias kept for component compatibility (maps to task_id)
+  task_id: string
+  user_id: string
   title: string
   completed: boolean
 }

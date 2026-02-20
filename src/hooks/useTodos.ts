@@ -1,17 +1,14 @@
 import { useEffect, useReducer } from 'react'
 import { TODO_FILTERS } from '../consts'
-import { fetchTodos, updateTodos } from '../services/todos'
-import { type TodoList, type FilterValue } from '../types'
+import { getTodos, createTodo, updateTodo, deleteTodo } from '../services/todos'
+import { type TodoList, type FilterValue, type Todo } from '../types'
 
 const initialState = {
-  sync: false,
-  todos: [],
+  todos: [] as TodoList,
   filterSelected: (() => {
-    // read from url query params using URLSearchParams
     const params = new URLSearchParams(window.location.search)
     const filter = params.get('filter') as FilterValue | null
     if (filter === null) return TODO_FILTERS.ALL
-    // check filter is valid, if not return ALL
     return Object
       .values(TODO_FILTERS)
       .includes(filter)
@@ -22,33 +19,30 @@ const initialState = {
 
 type Action =
   | { type: 'INIT_TODOS', payload: { todos: TodoList } }
+  | { type: 'ADD_TODO', payload: { todo: Todo } }
   | { type: 'CLEAR_COMPLETED' }
   | { type: 'COMPLETED', payload: { id: string, completed: boolean } }
   | { type: 'FILTER_CHANGE', payload: { filter: FilterValue } }
   | { type: 'REMOVE', payload: { id: string } }
-  | { type: 'SAVE', payload: { title: string } }
   | { type: 'UPDATE_TITLE', payload: { id: string, title: string } }
 
 interface State {
-  sync: boolean
   todos: TodoList
   filterSelected: FilterValue
 }
 
 const reducer = (state: State, action: Action): State => {
   if (action.type === 'INIT_TODOS') {
-    const { todos } = action.payload
-    return {
-      ...state,
-      sync: false,
-      todos
-    }
+    return { ...state, todos: action.payload.todos }
+  }
+
+  if (action.type === 'ADD_TODO') {
+    return { ...state, todos: [...state.todos, action.payload.todo] }
   }
 
   if (action.type === 'CLEAR_COMPLETED') {
     return {
       ...state,
-      sync: true,
       todos: state.todos.filter((todo) => !todo.completed)
     }
   }
@@ -57,50 +51,20 @@ const reducer = (state: State, action: Action): State => {
     const { id, completed } = action.payload
     return {
       ...state,
-      sync: true,
-      todos: state.todos.map((todo) => {
-        if (todo.id === id) {
-          return {
-            ...todo,
-            completed
-          }
-        }
-
-        return todo
-      })
+      todos: state.todos.map((todo) =>
+        todo.id === id ? { ...todo, completed } : todo
+      )
     }
   }
 
   if (action.type === 'FILTER_CHANGE') {
-    const { filter } = action.payload
-    return {
-      ...state,
-      sync: true,
-      filterSelected: filter
-    }
+    return { ...state, filterSelected: action.payload.filter }
   }
 
   if (action.type === 'REMOVE') {
-    const { id } = action.payload
     return {
       ...state,
-      sync: true,
-      todos: state.todos.filter((todo) => todo.id !== id)
-    }
-  }
-
-  if (action.type === 'SAVE') {
-    const { title } = action.payload
-    const newTodo = {
-      id: crypto.randomUUID(),
-      title,
-      completed: false
-    }
-
-    return {
-      ...state,
-      sync: true,
-      todos: [...state.todos, newTodo]
+      todos: state.todos.filter((todo) => todo.id !== action.payload.id)
     }
   }
 
@@ -108,17 +72,9 @@ const reducer = (state: State, action: Action): State => {
     const { id, title } = action.payload
     return {
       ...state,
-      sync: true,
-      todos: state.todos.map((todo) => {
-        if (todo.id === id) {
-          return {
-            ...todo,
-            title
-          }
-        }
-
-        return todo
-      })
+      todos: state.todos.map((todo) =>
+        todo.id === id ? { ...todo, title } : todo
+      )
     }
   }
 
@@ -137,64 +93,83 @@ export const useTodos = (): {
   handleSave: (title: string) => void
   handleUpdateTitle: (params: { id: string, title: string }) => void
 } => {
-  const [{ sync, todos, filterSelected }, dispatch] = useReducer(reducer, initialState)
+  const [{ todos, filterSelected }, dispatch] = useReducer(reducer, initialState)
 
-  const handleCompleted = (id: string, completed: boolean): void => {
-    dispatch({ type: 'COMPLETED', payload: { id, completed } })
-  }
+  // Load todos from the API on mount
+  useEffect(() => {
+    getTodos()
+      .then((fetched) => {
+        // The backend returns task_id as the unique key; expose it as `id`
+        // so existing components keep working without changes.
+        const normalised = fetched.map((t) => ({ ...t, id: t.task_id }))
+        dispatch({ type: 'INIT_TODOS', payload: { todos: normalised } })
+      })
+      .catch((err: unknown) => { console.error(err) })
+  }, [])
 
-  const handleRemove = (id: string): void => {
-    dispatch({ type: 'REMOVE', payload: { id } })
-  }
-
-  const handleUpdateTitle = ({ id, title }: { id: string, title: string }): void => {
-    dispatch({ type: 'UPDATE_TITLE', payload: { id, title } })
-  }
-
+  // Create a new todo → POST /tasks, then add to local state
   const handleSave = (title: string): void => {
-    dispatch({ type: 'SAVE', payload: { title } })
+    createTodo(title)
+      .then((todo) => {
+        if (todo !== null) {
+          dispatch({ type: 'ADD_TODO', payload: { todo: { ...todo, id: todo.task_id } } })
+        }
+      })
+      .catch((err: unknown) => { console.error(err) })
   }
 
+  // Toggle completed → PUT /tasks + update local state
+  const handleCompleted = (id: string, completed: boolean): void => {
+    updateTodo(id, { completed })
+      .then((ok) => {
+        if (ok) dispatch({ type: 'COMPLETED', payload: { id, completed } })
+      })
+      .catch((err: unknown) => { console.error(err) })
+  }
+
+  // Rename title → PUT /tasks + update local state
+  const handleUpdateTitle = ({ id, title }: { id: string, title: string }): void => {
+    updateTodo(id, { title })
+      .then((ok) => {
+        if (ok) dispatch({ type: 'UPDATE_TITLE', payload: { id, title } })
+      })
+      .catch((err: unknown) => { console.error(err) })
+  }
+
+  // Delete → DELETE /tasks + remove from local state
+  const handleRemove = (id: string): void => {
+    deleteTodo(id)
+      .then((ok) => {
+        if (ok) dispatch({ type: 'REMOVE', payload: { id } })
+      })
+      .catch((err: unknown) => { console.error(err) })
+  }
+
+  // Clear completed → DELETE each completed todo in parallel
   const handleClearCompleted = (): void => {
-    dispatch({ type: 'CLEAR_COMPLETED' })
+    const completed = todos.filter((t) => t.completed)
+    Promise.all(completed.map((t) => deleteTodo(t.id)))
+      .then(() => {
+        dispatch({ type: 'CLEAR_COMPLETED' })
+      })
+      .catch((err: unknown) => { console.error(err) })
   }
 
   const handleFilterChange = (filter: FilterValue): void => {
     dispatch({ type: 'FILTER_CHANGE', payload: { filter } })
-
     const params = new URLSearchParams(window.location.search)
     params.set('filter', filter)
     window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`)
   }
 
-  const filteredTodos = todos.filter(todo => {
-    if (filterSelected === TODO_FILTERS.ACTIVE) {
-      return !todo.completed
-    }
-
-    if (filterSelected === TODO_FILTERS.COMPLETED) {
-      return todo.completed
-    }
-
+  const filteredTodos = todos.filter((todo) => {
+    if (filterSelected === TODO_FILTERS.ACTIVE) return !todo.completed
+    if (filterSelected === TODO_FILTERS.COMPLETED) return todo.completed
     return true
   })
 
-  const completedCount = todos.filter((todo) => todo.completed).length
+  const completedCount = todos.filter((t) => t.completed).length
   const activeCount = todos.length - completedCount
-
-  useEffect(() => {
-    fetchTodos()
-      .then(todos => {
-        dispatch({ type: 'INIT_TODOS', payload: { todos } })
-      })
-      .catch(err => { console.error(err) })
-  }, [])
-
-  useEffect(() => {
-    if (sync) {
-      updateTodos({ todos }).catch(err => { console.error(err) })
-    }
-  }, [todos, sync])
 
   return {
     activeCount,

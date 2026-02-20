@@ -1,3 +1,4 @@
+import { Filters } from './components/Filters'
 import { Header } from './components/Header'
 import { Todos } from './components/Todos'
 import { useTodos } from './hooks/useTodos'
@@ -16,6 +17,8 @@ const App: React.FC = () => {
     todos: filteredTodos
   } = useTodos()
 
+  const hasTodos = filteredTodos.length > 0 || completedCount > 0
+
   return (
     <>
       <div className='todoapp'>
@@ -26,6 +29,22 @@ const App: React.FC = () => {
           setTitle={handleUpdateTitle}
           todos={filteredTodos}
         />
+        {hasTodos && (
+          <footer className='footer'>
+            <span className='todo-count'>
+              <strong>{activeCount}</strong> {activeCount === 1 ? 'item' : 'items'} left
+            </span>
+            <Filters
+              filterSelected={filterSelected}
+              handleFilterChange={handleFilterChange}
+            />
+            {completedCount > 0 && (
+              <button className='clear-completed' onClick={handleClearCompleted}>
+                Clear completed
+              </button>
+            )}
+          </footer>
+        )}
       </div>
     </>
   )

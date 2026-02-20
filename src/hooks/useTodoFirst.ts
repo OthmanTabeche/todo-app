@@ -54,8 +54,11 @@ export const useTodos = (): {
   }
 
   const handleSave = (title: string): void => {
+    const uuid = crypto.randomUUID()
     const newTodo = {
-      id: crypto.randomUUID(),
+      id: uuid,
+      task_id: uuid,
+      user_id: 'user-1',
       title,
       completed: false
     }

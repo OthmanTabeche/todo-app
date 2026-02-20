@@ -1,35 +1,58 @@
-import { type TodoList } from '../types'
+import { type Todo } from '../types'
 
-const API_URL = 'https://api.jsonbin.io/v3/b/63ff3a52ebd26539d087639c'
+const API_URL = import.meta.env.VITE_API_URL
+const USER_ID = import.meta.env.VITE_USER_ID
 
-interface Todo {
-  id: string
-  title: string
-  completed: boolean
-  order: number
-}
-
-export const fetchTodos = async (): Promise<Todo[]> => {
-  const res = await fetch(API_URL)
+// GET /tasks?user_id=<id>
+export const getTodos = async (): Promise<Todo[]> => {
+  const res = await fetch(`${API_URL}/tasks?user_id=${USER_ID}`)
   if (!res.ok) {
     console.error('Error fetching todos')
     return []
   }
-
-  const { record: todos } = await res.json() as { record: Todo[] }
-  return todos
+  const data = await res.json() as Todo[]
+  return data
 }
 
-export const updateTodos = async ({ todos }: { todos: TodoList }): Promise<boolean> => {
-  console.log(import.meta.env.VITE_API_BIN_KEY)
-  const res = await fetch(API_URL, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': import.meta.env.VITE_API_BIN_KEY
-    },
-    body: JSON.stringify(todos)
+// POST /tasks  { user_id, title }
+export const createTodo = async (title: string): Promise<Todo | null> => {
+  const res = await fetch(`${API_URL}/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: USER_ID, title })
   })
+  if (!res.ok) {
+    console.error('Error creating todo')
+    return null
+  }
+  return await res.json() as Todo
+}
 
+// PUT /tasks  { user_id, task_id, title?, completed? }
+export const updateTodo = async (
+  taskId: string,
+  changes: { title?: string, completed?: boolean }
+): Promise<boolean> => {
+  const res = await fetch(`${API_URL}/tasks`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: USER_ID, task_id: taskId, ...changes })
+  })
+  if (!res.ok) {
+    console.error('Error updating todo')
+  }
+  return res.ok
+}
+
+// DELETE /tasks  { user_id, task_id }
+export const deleteTodo = async (taskId: string): Promise<boolean> => {
+  const res = await fetch(`${API_URL}/tasks`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: USER_ID, task_id: taskId })
+  })
+  if (!res.ok) {
+    console.error('Error deleting todo')
+  }
   return res.ok
 }
