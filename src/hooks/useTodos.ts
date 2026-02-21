@@ -113,8 +113,7 @@ export const useTodos = (): {
       .then((todo) => {
         if (todo !== null) {
           dispatch({ type: 'ADD_TODO', payload: { todo: { ...todo, id: todo.task_id } } })
-          console.log('%c TAREA CREADA — Mírala en DynamoDB!', 'color: #22c55e; font-weight: bold; font-size: 14px;')
-          console.log('%c Tabla: todos-table  |  AWS Console → DynamoDB → Explore table items', 'color: #86efac;')
+          console.log('TAREA CREADA — Mírala en DynamoDB!')
           console.table({ task_id: todo.task_id, user_id: todo.user_id, title: todo.title, completed: todo.completed })
         }
       })
@@ -127,8 +126,8 @@ export const useTodos = (): {
       .then((ok) => {
         if (ok) {
           dispatch({ type: 'COMPLETED', payload: { id, completed } })
-          console.log('%c TAREA ACTUALIZADA — Comprueba el campo "completed" en DynamoDB!', 'color: #60a5fa; font-weight: bold; font-size: 14px;')
-          console.log('%ctask_id:', 'color: #93c5fd;', id, '| completed:', completed)
+          console.log('TAREA ACTUALIZADA — Comprueba el campo "completed" en DynamoDB!')
+          console.log('task_id:', id, '| completed:', completed)
         }
       })
       .catch((err: unknown) => { console.error(err) })
@@ -140,8 +139,8 @@ export const useTodos = (): {
       .then((ok) => {
         if (ok) {
           dispatch({ type: 'UPDATE_TITLE', payload: { id, title } })
-          console.log('%c TÍTULO EDITADO — Comprueba el campo "title" en DynamoDB!', 'color: #f59e0b; font-weight: bold; font-size: 14px;')
-          console.log('%ctask_id:', 'color: #fcd34d;', id, '| nuevo título:', title)
+          console.log('TÍTULO EDITADO — Comprueba el campo "title" en DynamoDB!')
+          console.log('task_id:', id, '| nuevo título:', title)
         }
       })
       .catch((err: unknown) => { console.error(err) })
@@ -153,8 +152,8 @@ export const useTodos = (): {
       .then((ok) => {
         if (ok) {
           dispatch({ type: 'REMOVE', payload: { id } })
-          console.log('%c TAREA ELIMINADA — Ya no aparece en DynamoDB!', 'color: #f87171; font-weight: bold; font-size: 14px;')
-          console.log('%ctask_id eliminado:', 'color: #fca5a5;', id)
+          console.log('TAREA ELIMINADA — Ya no aparece en DynamoDB!')
+          console.log('task_id eliminado:', id)
         }
       })
       .catch((err: unknown) => { console.error(err) })
@@ -166,8 +165,8 @@ export const useTodos = (): {
     Promise.all(completed.map((t) => deleteTodo(t.id)))
       .then(() => {
         dispatch({ type: 'CLEAR_COMPLETED' })
-        console.log('% TAREAS COMPLETADAS ELIMINADAS — Verifica en DynamoDB que ya no existen!', 'color: #c084fc; font-weight: bold; font-size: 14px;')
-        console.log('%Eliminadas:', 'color: #d8b4fe;', completed.length, 'tareas | IDs:', completed.map(t => t.id))
+        console.log('TAREAS COMPLETADAS ELIMINADAS — Verifica en DynamoDB que ya no existen!')
+        console.log('Eliminadas:', completed.length, 'tareas | IDs:', completed.map(t => t.id))
       })
       .catch((err: unknown) => { console.error(err) })
   }
