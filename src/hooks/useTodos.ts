@@ -113,6 +113,9 @@ export const useTodos = (): {
       .then((todo) => {
         if (todo !== null) {
           dispatch({ type: 'ADD_TODO', payload: { todo: { ...todo, id: todo.task_id } } })
+          console.log('%c TAREA CREADA — Mírala en DynamoDB!', 'color: #22c55e; font-weight: bold; font-size: 14px;')
+          console.log('%c Tabla: todos-table  |  AWS Console → DynamoDB → Explore table items', 'color: #86efac;')
+          console.table({ task_id: todo.task_id, user_id: todo.user_id, title: todo.title, completed: todo.completed })
         }
       })
       .catch((err: unknown) => { console.error(err) })
@@ -122,7 +125,11 @@ export const useTodos = (): {
   const handleCompleted = (id: string, completed: boolean): void => {
     updateTodo(id, { completed })
       .then((ok) => {
-        if (ok) dispatch({ type: 'COMPLETED', payload: { id, completed } })
+        if (ok) {
+          dispatch({ type: 'COMPLETED', payload: { id, completed } })
+          console.log('%c TAREA ACTUALIZADA — Comprueba el campo "completed" en DynamoDB!', 'color: #60a5fa; font-weight: bold; font-size: 14px;')
+          console.log('%ctask_id:', 'color: #93c5fd;', id, '| completed:', completed)
+        }
       })
       .catch((err: unknown) => { console.error(err) })
   }
@@ -131,7 +138,11 @@ export const useTodos = (): {
   const handleUpdateTitle = ({ id, title }: { id: string, title: string }): void => {
     updateTodo(id, { title })
       .then((ok) => {
-        if (ok) dispatch({ type: 'UPDATE_TITLE', payload: { id, title } })
+        if (ok) {
+          dispatch({ type: 'UPDATE_TITLE', payload: { id, title } })
+          console.log('%c TÍTULO EDITADO — Comprueba el campo "title" en DynamoDB!', 'color: #f59e0b; font-weight: bold; font-size: 14px;')
+          console.log('%ctask_id:', 'color: #fcd34d;', id, '| nuevo título:', title)
+        }
       })
       .catch((err: unknown) => { console.error(err) })
   }
@@ -140,7 +151,11 @@ export const useTodos = (): {
   const handleRemove = (id: string): void => {
     deleteTodo(id)
       .then((ok) => {
-        if (ok) dispatch({ type: 'REMOVE', payload: { id } })
+        if (ok) {
+          dispatch({ type: 'REMOVE', payload: { id } })
+          console.log('%c TAREA ELIMINADA — Ya no aparece en DynamoDB!', 'color: #f87171; font-weight: bold; font-size: 14px;')
+          console.log('%ctask_id eliminado:', 'color: #fca5a5;', id)
+        }
       })
       .catch((err: unknown) => { console.error(err) })
   }
@@ -151,6 +166,8 @@ export const useTodos = (): {
     Promise.all(completed.map((t) => deleteTodo(t.id)))
       .then(() => {
         dispatch({ type: 'CLEAR_COMPLETED' })
+        console.log('% TAREAS COMPLETADAS ELIMINADAS — Verifica en DynamoDB que ya no existen!', 'color: #c084fc; font-weight: bold; font-size: 14px;')
+        console.log('%Eliminadas:', 'color: #d8b4fe;', completed.length, 'tareas | IDs:', completed.map(t => t.id))
       })
       .catch((err: unknown) => { console.error(err) })
   }
